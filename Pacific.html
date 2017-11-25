@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Pacific Division</title>
+        <script type="text/javascript" src="../d3/d3.v3.js"></script>
+        <style type="text/css">
+
+            .axis path,
+            .axis line {
+                fill: none;
+                stroke: black;
+                shape-rendering: crispEdges;
+            }
+            .axis text {
+                stroke: lightgrey;
+                font-family: sans-serif;
+                font-size: 10px;
+            }
+
+            .line {
+                fill: none;
+                stroke: steelblue;
+                stroke-width: 2px;
+            }
+
+            .grid .tick {
+            	stroke: lightgrey;
+            	stroke-opacity: 0.7;
+            	shape-rendering: crispEdges;
+            }
+
+            .grid path {
+            	stroke-width: 0;
+            }
+
+            .graph-svg-component {
+                background-color: black;
+            }
+
+            .legend {
+                font-size: 16px;
+                font-weight: bold;
+                text-anchor: middle;
+            }
+
+        </style>
+    </head>
+    <body>
+        <strong><h1>Pacific Division</h1></strong>
+        <script type="text/javascript">
+
+            var margin = {top: 20, right: 20, bottom: 70, left: 50},
+                width = 1000 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            var padding = 20;
+            var ypadding = 30;
+            var svgpadding = 80;
+
+            var parseDate = d3.time.format("%Y").parse;
+
+            var x = d3.time.scale()
+                .range([0, width]);
+
+            var y = d3.scale.linear()
+                .range([height, 0]);
+
+            var color = d3.scale.ordinal()
+                .domain(["Warriors", "Clippers", "Kings", "Suns", "Lakers"])
+                .range(["#FDB927", "#ED174C", "#753BBD", "#E65F20", "#FDB927"]);
+
+            var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom")
+                .ticks(30);
+
+            var yAxis = d3.svg.axis()
+                .scale(y)
+                .orient("left")
+                .ticks(20);
+
+            var line = d3.svg.line()
+                .x(function(d) { return x(d.date); })
+                .y(function(d) { return y(d.wins); })
+                .defined(function(d) { return d.wins; }); /* null values skipped */
+
+            var svg = d3.select("body")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right + svgpadding) /* added padding for labels to show */
+                .attr("height", height + margin.top +margin.bottom)
+                .attr("class", "graph-svg-component")                /* from CSS background color*/
+                .append("g")
+                .attr("transform", "translate(" + margin.right + "," + margin.top + ")");
+
+            function make_x_axis() {
+            	return d3.svg.axis()
+            		.scale(x)
+            		.orient("bottom")
+            		.ticks(30)
+            }
+
+            function make_y_axis() {
+            	return d3.svg.axis()
+            		.scale(y)
+            		.orient("left")
+            		.ticks(20)
+            }
+
+            d3.csv("Pacific.csv", function(error, data) {
+                if (error) throw error;
+
+                color.domain(d3.keys(data[0]).filter(function(key) {
+                    return key !== "date";
+                }));
+
+                data.forEach(function(d) {
+                    d.date = parseDate(d.date);
+                });
+
+                var teams = color.domain().map(function(name) {
+                    return {
+                        name: name,
+                        values: data.map(function(d) {
+                            return {date: d.date, wins: +d[name]};
+                        })
+                    };
+                });
+
+                x.domain(d3.extent(data, function(d) { return d.date; }));
+                y.domain([0, 82]);
+
+
+                var dataNest = d3.nest()
+                    .key(function(d) { return d.symbol; }) /* Cannot figure out how to return each team!!!!!!!*/
+                    .entries(data);
+
+                legendSpace = width/dataNest.length;
+
+
+                svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(30," + height + ")")
+                    .call(xAxis)
+                  .append("text")
+                    .attr("x", width / 2 )
+                    .attr("y", height + margin.bottom)
+                    .style("text-anchor", "middle")
+                    .text("Year");
+
+                svg.append("g")
+                    .attr("class", "y axis")
+                    .attr("transform", "translate(" + ypadding + ",0)")
+                    .call(yAxis)
+                  .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", ".71em")
+                    .style("text-anchor", "end")
+                    .text("Wins");
+
+                var teams = svg.selectAll(".teams")
+                    .data(teams)
+                  .enter().append("g")
+                    .attr("class", "teams");
+
+                dataNest.forEach(function(d,i) {
+
+                teams.append("path")
+                    .attr("class", "line")
+                    .attr("transform", "translate(" + ypadding + ",0)")
+                    .attr("d", function(d) { return line(d.values); })
+                    .style("stroke", function(d) { return color(d.name); });
+
+                svg.append("text")
+                    .attr("x", (legendSpace/2)+i*legendSpace)
+                    .attr("y", height + (margin.bottom/2)+ 5)
+                    .attr("class", "legend")
+                    .style("fill", function() {
+                        return d.color = color(d.name); })
+                    .text(d.key);
+                });
+
+                teams.append("text")
+                    .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+                    .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.wins) + ")"; })
+                    .attr("x", 35)
+                    .attr("dy", ".35em")
+                    .text(function(d) { return d.name; })
+                    .attr("fill", "lightgrey");
+
+                svg.append("g")
+                    .attr("class", "grid")
+                    .attr("transform", "translate(30," + height + ")")
+                    .call(make_x_axis()
+                        .tickSize(-height, 0, 0)
+                        .tickFormat("")
+                    )
+
+                svg.append("g")
+                    .attr("class", "grid")
+                    .attr("transform", "translate(" + ypadding + ",0)")
+                    .call(make_y_axis()
+                        .tickSize(-width, 0, 0)
+                        .tickFormat("")
+                    )
+            });
+
+            function type(d) {
+                d.date = formatDate.parse(d.date);
+                d.wins = +d.wins;
+                return d;
+            }
+
+        </script>
+    </body>
+</html>
