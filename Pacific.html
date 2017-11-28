@@ -24,6 +24,10 @@
                 stroke-width: 2px;
             }
 
+            .line:hover {
+                stroke-width: 7px;
+            }
+
             .grid .tick {
             	stroke: lightgrey;
             	stroke-opacity: 0.7;
@@ -68,7 +72,7 @@
 
             var color = d3.scale.ordinal()
                 .domain(["Warriors", "Clippers", "Kings", "Suns", "Lakers"])
-                .range(["#FDB927", "#ED174C", "#753BBD", "#E65F20", "#FDB927"]);
+                .range(["#2755fd", "#ED174C", "#753BBD", "#E65F20", "#FDB927"]);
 
             var xAxis = d3.svg.axis()
                 .scale(x)
@@ -178,7 +182,7 @@
                     .attr("class", "legend")
                     .style("fill", function() {
                         return d.color = color(d.name); })
-                    .text(d.key);
+                    .text(d.date);
                 });
 
                 teams.append("text")
